@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API格式测试工具</title>
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .test-method {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background: #fafafa;
+        }
+
+        .method-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .method-desc {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 15px;
+        }
+
+        button {
+            background: #409eff;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 12px;
+        }
+
+        button:hover {
+            background: #337ab7;
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .input-group {
+            margin: 10px 0;
+        }
+
+        input[type="text"] {
+            width: 400px;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .result {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .success {
+            background: #f0f9ff;
+            border: 1px solid #b3e19d;
+            color: #67c23a;
+        }
+
+        .error {
+            background: #fef0f0;
+            border: 1px solid #fbc4c4;
+            color: #f56c6c;
+        }
+
+        .info {
+            background: #f4f4f5;
+            border: 1px solid #d3d4d6;
+            color: #606266;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>API请求格式测试工具</h1>
+        <p>尝试不同的请求格式，找出服务器接受的正确格式</p>
+
+        <div class="input-group">
+            <label>API地址: </label>
+            <input type="text" id="apiUrl" value="http://58.199.161.154:8000/chat" />
+        </div>
+        <div class="input-group">
+            <label>测试问题: </label>
+            <input type="text" id="testQuery" value="你好" />
+        </div>
+
+        <div class="test-method">
+            <div class="method-title">方法1: GET + 查询参数</div>
+            <div class="method-desc">GET http://url?query=问题</div>
+            <button onclick="testMethod1()" id="btn1">测试方法1</button>
+            <div id="result1" class="result info">等待测试...</div>
+        </div>
+
+        <div class="test-method">
+            <div class="method-title">方法2: POST + JSON body</div>
+            <div class="method-desc">POST http://url, body: {"query": "问题"}</div>
+            <button onclick="testMethod2()" id="btn2">测试方法2</button>
+            <div id="result2" class="result info">等待测试...</div>
+        </div>
+
+        <div class="test-method">
+            <div class="method-title">方法3: POST + 查询参数</div>
+            <div class="method-desc">POST http://url?query=问题</div>
+            <button onclick="testMethod3()" id="btn3">测试方法3</button>
+            <div id="result3" class="result info">等待测试...</div>
+        </div>
+
+        <div class="test-method">
+            <div class="method-title">方法4: POST + 表单数据</div>
+            <div class="method-desc">POST http://url, Content-Type: application/x-www-form-urlencoded</div>
+            <button onclick="testMethod4()" id="btn4">测试方法4</button>
+            <div id="result4" class="result info">等待测试...</div>
+        </div>
+
+        <div class="test-method">
+            <div class="method-title">方法5: POST + 纯文本</div>
+            <div class="method-desc">POST http://url, Content-Type: text/plain</div>
+            <button onclick="testMethod5()" id="btn5">测试方法5</button>
+            <div id="result5" class="result info">等待测试...</div>
+        </div>
+
+        <button onclick="testAllMethods()" style="background: #67c23a; font-size: 14px; padding: 12px 24px;">🚀
+            测试所有方法</button>
+        <button onclick="clearAllResults()" style="background: #909399; font-size: 14px; padding: 12px 24px;">🧹
+            清除结果</button>
+    </div>
+
+    <script>
+        async function testRequest(method, url, options, resultId, description) {
+            const resultDiv = document.getElementById(resultId);
+            const btn = document.getElementById(resultId.replace('result', 'btn'));
+
+            btn.disabled = true;
+            btn.textContent = '测试中...';
+            resultDiv.className = 'result info';
+            resultDiv.textContent = '正在测试...';
+
+            try {
+                console.log(`=== ${description} ===`);
+                console.log('URL:', url);
+                console.log('Options:', options);
+
+                const startTime = Date.now();
+                const response = await fetch(url, options);
+                const endTime = Date.now();
+
+                console.log('响应状态:', response.status, response.statusText);
+                console.log('响应时间:', endTime - startTime, 'ms');
+
+                const responseHeaders = {};
+                response.headers.forEach((value, key) => {
+                    responseHeaders[key] = value;
+                });
+                console.log('响应头:', responseHeaders);
+
+                if (response.ok) {
+                    const text = await response.text();
+                    console.log('响应内容:', text);
+
+                    let data;
+                    try {
+                        data = JSON.parse(text);
+                    } catch (e) {
+                        data = { response: text };
+                    }
+
+                    resultDiv.className = 'result success';
+                    resultDiv.textContent = `✅ 成功！
+状态码: ${response.status}
+响应时间: ${endTime - startTime}ms
+响应内容: ${JSON.stringify(data, null, 2)}`;
+                } else {
+                    const errorText = await response.text();
+                    resultDiv.className = 'result error';
+                    resultDiv.textContent = `❌ 失败！
+状态码: ${response.status} ${response.statusText}
+错误内容: ${errorText}`;
+                }
+            } catch (error) {
+                console.error('请求失败:', error);
+                resultDiv.className = 'result error';
+                resultDiv.textContent = `❌ 请求异常:
+${error.message}`;
+            }
+
+            btn.disabled = false;
+            btn.textContent = '重新测试';
+        }
+
+        async function testMethod1() {
+            const apiUrl = document.getElementById('apiUrl').value;
+            const query = document.getElementById('testQuery').value;
+            const url = `${apiUrl}?query=${encodeURIComponent(query)}`;
+
+            await testRequest('GET', url, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json, text/plain, */*'
+                },
+                mode: 'cors',
+                credentials: 'omit'
+            }, 'result1', '方法1: GET + 查询参数');
+        }
+
+        async function testMethod2() {
+            const apiUrl = document.getElementById('apiUrl').value;
+            const query = document.getElementById('testQuery').value;
+
+            await testRequest('POST', apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json, text/plain, */*'
+                },
+                body: JSON.stringify({ query: query }),
+                mode: 'cors',
+                credentials: 'omit'
+            }, 'result2', '方法2: POST + JSON body');
+        }
+
+        async function testMethod3() {
+            const apiUrl = document.getElementById('apiUrl').value;
+            const query = document.getElementById('testQuery').value;
+            const url = `${apiUrl}?query=${encodeURIComponent(query)}`;
+
+            await testRequest('POST', url, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json, text/plain, */*'
+                },
+                mode: 'cors',
+                credentials: 'omit'
+            }, 'result3', '方法3: POST + 查询参数');
+        }
+
+        async function testMethod4() {
+            const apiUrl = document.getElementById('apiUrl').value;
+            const query = document.getElementById('testQuery').value;
+
+            const formData = new URLSearchParams();
+            formData.append('query', query);
+
+            await testRequest('POST', apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'Accept': 'application/json, text/plain, */*'
+                },
+                body: formData,
+                mode: 'cors',
+                credentials: 'omit'
+            }, 'result4', '方法4: POST + 表单数据');
+        }
+
+        async function testMethod5() {
+            const apiUrl = document.getElementById('apiUrl').value;
+            const query = document.getElementById('testQuery').value;
+
+            await testRequest('POST', apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'text/plain',
+                    'Accept': 'application/json, text/plain, */*'
+                },
+                body: query,
+                mode: 'cors',
+                credentials: 'omit'
+            }, 'result5', '方法5: POST + 纯文本');
+        }
+
+        async function testAllMethods() {
+            console.log('开始测试所有方法...');
+            await testMethod1();
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            await testMethod2();
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            await testMethod3();
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            await testMethod4();
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            await testMethod5();
+            console.log('所有方法测试完成！');
+        }
+
+        function clearAllResults() {
+            for (let i = 1; i <= 5; i++) {
+                document.getElementById(`result${i}`).className = 'result info';
+                document.getElementById(`result${i}`).textContent = '等待测试...';
+                document.getElementById(`btn${i}`).textContent = `测试方法${i}`;
+                document.getElementById(`btn${i}`).disabled = false;
+            }
+        }
+    </script>
+</body>
+
+</html>

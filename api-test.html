@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI API 连接测试</title>
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        button {
+            background: #409eff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+
+        button:hover {
+            background: #337ab7;
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .input-group {
+            margin: 10px 0;
+        }
+
+        input[type="text"] {
+            width: 300px;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .result {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+
+        .success {
+            background: #f0f9ff;
+            border: 1px solid #b3e19d;
+            color: #67c23a;
+        }
+
+        .error {
+            background: #fef0f0;
+            border: 1px solid #fbc4c4;
+            color: #f56c6c;
+        }
+
+        .info {
+            background: #f4f4f5;
+            border: 1px solid #d3d4d6;
+            color: #606266;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>AI API 连接测试工具</h1>
+        <p>此工具用于测试您的AI API连接是否正常工作</p>
+
+        <div class="test-section">
+            <h3>1. 基本信息测试</h3>
+            <div class="input-group">
+                <label>API地址: </label>
+                <input type="text" id="apiUrl" value="http://58.199.161.154:8000/chat" />
+            </div>
+            <div class="input-group">
+                <label>测试问题: </label>
+                <input type="text" id="testQuery" value="你是谁" />
+            </div>
+            <button onclick="testConnection()" id="testBtn">测试连接</button>
+            <button onclick="clearResults()">清除结果</button>
+            <div id="result1" class="result info">点击"测试连接"开始测试...</div>
+        </div>
+
+        <div class="test-section">
+            <h3>2. CORS 检测</h3>
+            <p>检测跨域资源共享(CORS)配置</p>
+            <button onclick="checkCors()" id="corsBtn">检测CORS</button>
+            <div id="corsResult" class="result info">点击"检测CORS"开始检测...</div>
+        </div>
+
+        <div class="test-section">
+            <h3>3. 完整API测试</h3>
+            <p>模拟真实的Vue应用请求</p>
+            <button onclick="fullApiTest()" id="fullTestBtn">完整测试</button>
+            <div id="fullResult" class="result info">点击"完整测试"开始测试...</div>
+        </div>
+
+        <div class="test-section">
+            <h3>4. 故障排除建议</h3>
+            <ul>
+                <li><strong>CORS错误</strong>: 服务器需要设置Access-Control-Allow-Origin头</li>
+                <li><strong>网络错误</strong>: 检查服务器是否运行，端口是否正确</li>
+                <li><strong>超时错误</strong>: 增加超时时间或检查服务器性能</li>
+                <li><strong>SSL错误</strong>: 从HTTPS页面访问HTTP接口可能被阻止</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        async function testConnection() {
+            const btn = document.getElementById('testBtn');
+            const result = document.getElementById('result1');
+            const apiUrl = document.getElementById('apiUrl').value;
+            const query = document.getElementById('testQuery').value;
+
+            btn.disabled = true;
+            btn.textContent = '测试中...';
+            result.className = 'result info';
+            result.textContent = '正在测试连接...';
+
+            try {
+                console.log('测试URL:', apiUrl);
+                console.log('请求参数:', { query: query });
+
+                // 使用POST方法发送请求，将查询参数放在URL中
+                const response = await fetch(`${apiUrl}?query=${encodeURIComponent(query)}`, {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json, text/plain, */*',
+                        'Cache-Control': 'no-cache'
+                    },
+                    mode: 'cors',
+                    credentials: 'omit'
+                });
+
+                console.log('响应状态:', response.status, response.statusText);
+                console.log('响应头:', [...response.headers.entries()]);
+
+                if (response.ok) {
+                    const text = await response.text();
+                    console.log('响应内容:', text);
+
+                    let data;
+                    try {
+                        data = JSON.parse(text);
+                    } catch (e) {
+                        data = { response: text };
+                    }
+
+                    result.className = 'result success';
+                    result.textContent = `✅ 连接成功！
+状态码: ${response.status}
+响应内容: ${JSON.stringify(data, null, 2)}`;
+                } else {
+                    result.className = 'result error';
+                    result.textContent = `❌ HTTP错误: ${response.status} ${response.statusText}`;
+                }
+            } catch (error) {
+                console.error('测试失败:', error);
+                result.className = 'result error';
+                result.textContent = `❌ 连接失败: ${error.message}
+
+可能的原因:
+1. 服务器未运行或地址错误
+2. 网络连接问题
+3. CORS跨域限制
+4. 防火墙阻止
+
+详细错误: ${error.stack || error}`;
+            }
+
+            btn.disabled = false;
+            btn.textContent = '测试连接';
+        }
+
+        async function checkCors() {
+            const btn = document.getElementById('corsBtn');
+            const result = document.getElementById('corsResult');
+            const apiUrl = document.getElementById('apiUrl').value;
+
+            btn.disabled = true;
+            btn.textContent = '检测中...';
+            result.className = 'result info';
+            result.textContent = '正在检测CORS配置...';
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'OPTIONS',
+                    headers: {
+                        'Access-Control-Request-Method': 'POST',
+                        'Access-Control-Request-Headers': 'Content-Type'
+                    }
+                });
+
+                const allowOrigin = response.headers.get('Access-Control-Allow-Origin');
+                const allowMethods = response.headers.get('Access-Control-Allow-Methods');
+                const allowHeaders = response.headers.get('Access-Control-Allow-Headers');
+
+                result.className = 'result success';
+                result.textContent = `✅ CORS检测结果:
+Allow-Origin: ${allowOrigin || '未设置'}
+Allow-Methods: ${allowMethods || '未设置'}
+Allow-Headers: ${allowHeaders || '未设置'}
+状态码: ${response.status}`;
+
+            } catch (error) {
+                result.className = 'result error';
+                result.textContent = `❌ CORS检测失败: ${error.message}
+
+这通常意味着:
+1. 服务器未配置CORS
+2. 预检请求被拒绝
+3. 服务器不支持OPTIONS方法`;
+            }
+
+            btn.disabled = false;
+            btn.textContent = '检测CORS';
+        }
+
+        async function fullApiTest() {
+            const btn = document.getElementById('fullTestBtn');
+            const result = document.getElementById('fullResult');
+            const apiUrl = document.getElementById('apiUrl').value;
+
+            btn.disabled = true;
+            btn.textContent = '测试中...';
+            result.className = 'result info';
+            result.textContent = '正在进行完整API测试...';
+
+            const testQueries = ['你好', '你是谁', '1+1等于几'];
+            const results = [];
+
+            for (let i = 0; i < testQueries.length; i++) {
+                const query = testQueries[i];
+                try {
+                    const startTime = Date.now();
+
+                    // 使用POST方法发送请求，将查询参数放在URL中
+                    const response = await fetch(`${apiUrl}?query=${encodeURIComponent(query)}`, {
+                        method: 'POST',
+                        headers: {
+                            'Accept': 'application/json, text/plain, */*',
+                            'Cache-Control': 'no-cache'
+                        },
+                        mode: 'cors',
+                        credentials: 'omit'
+                    });
+
+                    const endTime = Date.now();
+                    const responseTime = endTime - startTime;
+
+                    if (response.ok) {
+                        const text = await response.text();
+                        let data;
+                        try {
+                            data = JSON.parse(text);
+                        } catch (e) {
+                            data = { response: text };
+                        }
+
+                        results.push(`✅ 测试${i + 1}: "${query}"
+  响应时间: ${responseTime}ms
+  响应: ${data.response || text}`);
+                    } else {
+                        results.push(`❌ 测试${i + 1}: "${query}"
+  HTTP错误: ${response.status}`);
+                    }
+                } catch (error) {
+                    results.push(`❌ 测试${i + 1}: "${query}"
+  错误: ${error.message}`);
+                }
+            }
+
+            result.className = results.every(r => r.startsWith('✅')) ? 'result success' : 'result error';
+            result.textContent = `完整API测试结果:
+
+${results.join('\n\n')}`;
+
+            btn.disabled = false;
+            btn.textContent = '完整测试';
+        }
+
+        function clearResults() {
+            document.getElementById('result1').className = 'result info';
+            document.getElementById('result1').textContent = '结果已清除，点击"测试连接"开始测试...';
+            document.getElementById('corsResult').className = 'result info';
+            document.getElementById('corsResult').textContent = '结果已清除，点击"检测CORS"开始检测...';
+            document.getElementById('fullResult').className = 'result info';
+            document.getElementById('fullResult').textContent = '结果已清除，点击"完整测试"开始测试...';
+        }
+    </script>
+</body>
+
+</html>
