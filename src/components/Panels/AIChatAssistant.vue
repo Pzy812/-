@@ -764,11 +764,11 @@ export default {
       responseStyle: 'professional',
       domains: ['相图计算', '热力学性质'],
       autoSave: true,
-      apiUrl: 'http://58.199.161.154:8001/chat',
+      apiUrl: 'http://58.199.161.154:8001/chat2',
       timeout: 300000000,
       retryCount: 3,
       debugMode: false,
-      requestFormat: 'post-query'  // 更新为POST查询参数格式
+      requestFormat: 'post-json'  // 使用POST JSON请求体
     });
 
     // 快捷问题
@@ -1126,35 +1126,31 @@ export default {
       await scrollToBottom();
     };
 
-    // 构建请求配置 - 核心修改：使用URL查询参数传递
+    // 构建请求配置 - 使用POST JSON请求体
     const buildRequestConfig = (question) => {
       const baseUrl = settings.value.apiUrl;
       const sessionIdValue = sessionId.value;
       const combinedQuery = `${promptText.value}|^^sep^^|${question}`;
 
-      // 使用URLSearchParams处理查询参数，自动编码特殊字符
-      const params = new URLSearchParams();
-      params.append('session_id', sessionIdValue);
-      params.append('query', combinedQuery);
+      const body = {
+        query: combinedQuery,
+        session_id: sessionIdValue
+      };
 
-      // 组合完整URL
-      const requestUrl = `${baseUrl}?${params.toString()}`;
-
-      // 打印调试信息
       if (settings.value.debugMode) {
-        console.log('Sending POST request to:', requestUrl);
-        console.log('Request params:', params.toString());
+        console.log('Sending POST JSON to:', baseUrl);
+        console.log('Request body:', body);
       }
 
       return {
-        url: requestUrl,
+        url: baseUrl,
         options: {
           method: 'POST',
           headers: {
             'Accept': 'application/json',
-            // 移除Content-Type: application/json，因为没有请求体
-          }
-          // 移除body配置，参数通过URL查询参数传递
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(body)
         }
       };
     };
@@ -1442,35 +1438,31 @@ const phaseDiagramParams = {
       showSettings.value = !showSettings.value;
     };
 
-    // 测试连接 - 同步修改为URL查询参数
+    // 测试连接 - 使用POST JSON
     const testConnection = async () => {
       testingConnection.value = true;
       connectionStatus.value = null;
 
       try {
-        const testQuery = `${promptText.value}&&你好`;
+        const testQuery = `${promptText.value}|^^sep^^|你好`;
         const sessionIdValue = sessionId.value;
         const testUrl = settings.value.apiUrl;
 
-        // 拼接查询参数
-        const params = new URLSearchParams();
-        params.append('session_id', sessionIdValue);
-        params.append('query', testQuery);
-        const fullTestUrl = `${testUrl}?${params.toString()}`;
-
         // 打印调试信息
         if (settings.value.debugMode) {
-          console.log('Testing POST connection to:', fullTestUrl);
+          console.log('Testing POST JSON to:', testUrl);
         }
 
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-        const response = await fetch(fullTestUrl, {
+        const response = await fetch(testUrl, {
           method: 'POST',
           headers: {
             'Accept': 'application/json',
+            'Content-Type': 'application/json'
           },
+          body: JSON.stringify({ query: testQuery, session_id: sessionIdValue }),
           signal: controller.signal,
           mode: 'cors',
           credentials: 'omit'
@@ -2963,4 +2955,3 @@ const phaseDiagramParams = {
 
 
 </style>
-<!--修改AI助手的代码，要求把快捷方式的三个按钮放在文字‘和机器人聊天’的正右侧，使得发送框可以完整的显示出来-->
