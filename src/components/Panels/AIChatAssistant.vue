@@ -1438,31 +1438,27 @@ const phaseDiagramParams = {
       showSettings.value = !showSettings.value;
     };
 
-    // 测试连接 - 使用POST JSON
-    const testConnection = async () => {
+    // 测试连接 - 同步修改为URL查询参数
+    const testConnection = async (showMessage = true) => {
       testingConnection.value = true;
       connectionStatus.value = null;
 
       try {
-        const testQuery = `${promptText.value}|^^sep^^|你好`;
-        const sessionIdValue = sessionId.value;
-        const testUrl = settings.value.apiUrl;
+        const fullTestUrl = `http://58.199.161.154:8001/health/`;
 
         // 打印调试信息
         if (settings.value.debugMode) {
-          console.log('Testing POST JSON to:', testUrl);
+          console.log('Testing POST connection to:', fullTestUrl);
         }
 
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-        const response = await fetch(testUrl, {
-          method: 'POST',
+        const response = await fetch(fullTestUrl, {
+          method: 'GET',
           headers: {
             'Accept': 'application/json',
-            'Content-Type': 'application/json'
           },
-          body: JSON.stringify({ query: testQuery, session_id: sessionIdValue }),
           signal: controller.signal,
           mode: 'cors',
           credentials: 'omit'
@@ -1474,22 +1470,13 @@ const phaseDiagramParams = {
           console.log('Test response status:', response.status);
           console.log('Test response headers:', [...response.headers.entries()]);
         }
+        // console.log('yh-Test response status:', response.status);
+        if (response.status === 200) {
 
-        if (response.ok) {
-          const textResponse = await response.text();
-          let data;
-          try {
-            data = JSON.parse(textResponse);
-          } catch (e) {
-            data = { response: textResponse };
-          }
-
-          connectionStatus.value = {
-            type: 'success',
-            message: `连接成功！服务器响应: ${data.response ? data.response.substring(0, 50) : textResponse.substring(0, 50)}...`
-          };
           isOnline.value = true;
-          ElMessage.success('连接测试成功');
+          if (showMessage) {
+            ElMessage.success('智能体连接成功');
+          }
         } else {
           // 获取错误响应体
           const errorText = await response.text();
@@ -1523,7 +1510,6 @@ const phaseDiagramParams = {
 
       testingConnection.value = false;
     };
-
     // 保存设置
     const saveSettings = () => {
       // 将提示词一并持久化到设置中
@@ -1553,10 +1539,19 @@ const phaseDiagramParams = {
       }
     };
 
+    watch(activeTab, (newTab, oldTab) => {
+      // 当新的标签页是 'monitoring' 时，执行连接测试
+      if (newTab === 'monitoring') {
+        console.log('切换到监测页，开始测试连接...');
+        // 同样，我们推荐在自动检测时静默执行，避免打扰用户
+        testConnection(false); 
+      }
+    });
+
     onMounted(() => {
       loadSettings();
       initSessionId(); // 初始化session_id
-
+      testConnection(false); // 初始测试连接
       // 如果启用了调试模式，打印设置信息
       if (settings.value.debugMode) {
         console.log('Loaded settings:', settings.value);
